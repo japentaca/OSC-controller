@@ -12,51 +12,90 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="16dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="IP Address:"
-        android:textSize="16sp" />
-
-    <EditText
-        android:id="@+id/ipEditText"
+    <!-- Configuration Accordion Header -->
+    <LinearLayout
+        android:id="@+id/configurationHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="192.168.0.5"
-        android:text="192.168.0.5"
-        android:inputType="textUri" />
+        android:orientation="horizontal"
+        android:background="?attr/colorPrimaryVariant"
+        android:padding="12dp"
+        android:layout_marginBottom="0dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Port:"
-        android:textSize="16sp"
-        android:layout_marginTop="16dp" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⚙️ Configuración"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnPrimary" />
 
-    <EditText
-        android:id="@+id/portEditText"
+        <TextView
+            android:id="@+id/configExpandIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="▼"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnPrimary" />
+    </LinearLayout>
+
+    <!-- Configuration Content (Expandable) -->
+    <LinearLayout
+        android:id="@+id/configurationContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="9000"
-        android:text="9000"
-        android:inputType="number" />
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="?attr/colorSurface"
+        android:layout_marginBottom="12dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sampling Rate (ms):"
-        android:textSize="16sp"
-        android:layout_marginTop="16dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="IP Address:"
+            android:textSize="14sp" />
 
-    <EditText
-        android:id="@+id/samplingRateEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="200"
-        android:inputType="number"
-        android:text="200" />
+        <EditText
+            android:id="@+id/ipEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="192.168.0.5"
+            android:text="192.168.0.5"
+            android:inputType="textUri"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Port:"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/portEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="9000"
+            android:text="9000"
+            android:inputType="number"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sampling Rate (ms):"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/samplingRateEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="200"
+            android:inputType="number"
+            android:text="200" />
+    </LinearLayout>
 
     <Switch
         android:id="@+id/sendSwitch"

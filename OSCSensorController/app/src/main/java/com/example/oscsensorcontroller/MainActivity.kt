@@ -120,6 +120,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun initializeViews() {
+        // Setup accordion toggle
+        val configurationHeader = findViewById<LinearLayout>(R.id.configurationHeader)
+        val configurationContent = findViewById<LinearLayout>(R.id.configurationContent)
+        val configExpandIcon = findViewById<TextView>(R.id.configExpandIcon)
+        
+        var isConfigExpanded = true
+        
+        configurationHeader.setOnClickListener {
+            isConfigExpanded = !isConfigExpanded
+            if (isConfigExpanded) {
+                configurationContent.visibility = LinearLayout.VISIBLE
+                configExpandIcon.text = "▼"
+            } else {
+                configurationContent.visibility = LinearLayout.GONE
+                configExpandIcon.text = "▶"
+            }
+        }
+        
         ipEditText = findViewById(R.id.ipEditText)
         portEditText = findViewById(R.id.portEditText)
         samplingRateEditText = findViewById(R.id.samplingRateEditText)
