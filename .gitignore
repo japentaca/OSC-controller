@@ -1,0 +1,103 @@
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+*.apk
+*.ap_
+*.dex
+*.class
+*.jar
+*.so
+*.aar
+local.properties
+gradlew
+gradlew.bat
+
+# Android specific
+captures/
+.externalNativeBuild/
+.cxx/
+*.stackdump
+lint-results*.xml
+lint-results*.html
+.settings/
+.project
+.classpath
+.c9/
+*.launch
+.DS_Store
+thumbs.db
+.env
+.env.local
+
+# Build outputs
+app/build/
+app/release/
+app/debug/
+output/
+outputs/
+dist/
+
+# Kotlin
+*.kt.bak
+*.kexe
+*.kmm
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*~
+.vscode/
+.vscode-test/
+coverage/
+
+# OS specific
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+.vscode/
+.sublime-project
+.sublime-workspace
+*.sublime-workspace
+*.sublime-project
+
+# NDK
+obj/
+
+# Firebase
+google-services.json
+
+# Signing keys
+*.keystore
+*.jks
+*.key
+signing/
+
+# Generated files
+.generated/
+
+# Node modules (if using npm in project)
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Gradle properties (can contain sensitive data)
+# Only ignore if it contains sensitive info; otherwise track it
+# gradle.properties

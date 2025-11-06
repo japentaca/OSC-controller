@@ -1,0 +1,1 @@
+Coloca aquí el archivo javaosc-android.jar descargado desde https://github.com/hoijui/JavaOSC/releases antes de continuar. Esto es necesario para que la app funcione correctamente en Android.
