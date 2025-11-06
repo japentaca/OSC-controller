@@ -67,75 +67,225 @@
         android:layout_marginTop="16dp" />
 
     <CheckBox
-        android:id="@+id/accelerometerCheckBox"
+        android:id="@+id/normalizeCheckBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Accelerometer"
+        android:text="Normalize Values (0-1)"
         android:checked="true"
         android:layout_marginTop="16dp" />
 
-    <CheckBox
-        android:id="@+id/gyroscopeCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Gyroscope"
-        android:checked="true" />
-
-    <CheckBox
-        android:id="@+id/magnetometerCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Magnetometer"
-        android:checked="false" />
-
-    <CheckBox
-        android:id="@+id/lightSensorCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Light Sensor"
-        android:checked="false" />
-
-    <CheckBox
-        android:id="@+id/proximityCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Proximity Sensor"
-        android:checked="false" />
-
-    <CheckBox
-        android:id="@+id/pressureCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Pressure Sensor"
-        android:checked="false" />
-
-    <CheckBox
-        android:id="@+id/temperatureCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Temperature Sensor"
-        android:checked="false" />
-
-    <CheckBox
-        android:id="@+id/humidityCheckBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Humidity Sensor"
-        android:checked="false" />
-
-    <Button
-        android:id="@+id/startStopButton"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Start Sending"
-        android:layout_marginTop="24dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp">
 
-    <TextView
-        android:id="@+id/statusTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Status: Stopped"
-        android:textSize="14sp"
-        android:layout_marginTop="16dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Accelerometer -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/accelerometerCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Accelerometer"
+                    android:checked="true" />
+
+                <EditText
+                    android:id="@+id/accelerometerThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Gyroscope -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/gyroscopeCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Gyroscope"
+                    android:checked="true" />
+
+                <EditText
+                    android:id="@+id/gyroscopeThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Magnetometer -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/magnetometerCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Magnetometer"
+                    android:checked="false" />
+
+                <EditText
+                    android:id="@+id/magnetometerThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Light Sensor -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/lightSensorCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Light Sensor"
+                    android:checked="false" />
+
+                <EditText
+                    android:id="@+id/lightSensorThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Proximity Sensor -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/proximityCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Proximity Sensor"
+                    android:checked="false" />
+
+                <EditText
+                    android:id="@+id/proximityThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Pressure Sensor -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/pressureCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Pressure Sensor"
+                    android:checked="false" />
+
+                <EditText
+                    android:id="@+id/pressureThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Temperature Sensor -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/temperatureCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Temperature Sensor"
+                    android:checked="false" />
+
+                <EditText
+                    android:id="@+id/temperatureThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Humidity Sensor -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <CheckBox
+                    android:id="@+id/humidityCheckBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Humidity Sensor"
+                    android:checked="false" />
+
+                <EditText
+                    android:id="@+id/humidityThresholdEditText"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="0.05"
+                    android:text="0.05"
+                    android:inputType="numberDecimal"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

@@ -12,6 +12,8 @@ import android.widget.*
 import android.widget.Switch
 import androidx.appcompat.app.AppCompatActivity
 import java.net.InetAddress
+import android.text.Editable
+import android.text.TextWatcher
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -22,6 +24,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private lateinit var sensorManager: SensorManager
+    private lateinit var preferencesManager: PreferencesManager
     private var accelerometer: Sensor? = null
     private var gyroscope: Sensor? = null
     private var magnetometer: Sensor? = null
@@ -34,9 +37,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var ipEditText: EditText
     private lateinit var portEditText: EditText
     private lateinit var samplingRateEditText: EditText
-    private lateinit var startStopButton: Button
-    private lateinit var statusTextView: TextView
     private lateinit var sendSwitch: Switch
+    private lateinit var normalizeCheckBox: CheckBox
+    
+    // Threshold EditTexts for each sensor
+    private lateinit var accelerometerThresholdEditText: EditText
+    private lateinit var gyroscopeThresholdEditText: EditText
+    private lateinit var magnetometerThresholdEditText: EditText
+    private lateinit var lightSensorThresholdEditText: EditText
+    private lateinit var proximityThresholdEditText: EditText
+    private lateinit var pressureThresholdEditText: EditText
+    private lateinit var temperatureThresholdEditText: EditText
+    private lateinit var humidityThresholdEditText: EditText
+    
+    // Threshold values per sensor (0-1 range)
+    private var accelerometerThreshold = 0.05f
+    private var gyroscopeThreshold = 0.05f
+    private var magnetometerThreshold = 0.05f
+    private var lightThreshold = 0.05f
+    private var proximityThreshold = 0.05f
+    private var pressureThreshold = 0.05f
+    private var temperatureThreshold = 0.05f
+    private var humidityThreshold = 0.05f
     private var oscThread: HandlerThread? = null
     private var oscHandler: Handler? = null
 
@@ -67,11 +89,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var lastTemperatureData = 0f
     private var lastHumidityData = 0f
 
-    // Threshold for change detection (epsilon value for float comparison)
-    private var sensorThreshold = 0.0f
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Inicializar PreferencesManager
+        preferencesManager = PreferencesManager(this)
         
         // Set a global exception handler to catch AWT ClassNotFoundError
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -84,7 +106,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         "JavaOSC library requires compatible Android environment",
                         Toast.LENGTH_LONG
                     ).show()
-                    statusTextView.text = "Status: Stopped (Library Error)"
                     sendSwitch.isChecked = false
                 }
             } else {
@@ -96,20 +117,102 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         initializeViews()
         initializeSensors()
-        setupButtonListeners()
     }
 
     private fun initializeViews() {
         ipEditText = findViewById(R.id.ipEditText)
         portEditText = findViewById(R.id.portEditText)
         samplingRateEditText = findViewById(R.id.samplingRateEditText)
-        startStopButton = findViewById(R.id.startStopButton)
-        statusTextView = findViewById(R.id.statusTextView)
         sendSwitch = findViewById(R.id.sendSwitch)
+        normalizeCheckBox = findViewById(R.id.normalizeCheckBox)
+        
+        // Initialize threshold EditTexts
+        accelerometerThresholdEditText = findViewById(R.id.accelerometerThresholdEditText)
+        gyroscopeThresholdEditText = findViewById(R.id.gyroscopeThresholdEditText)
+        magnetometerThresholdEditText = findViewById(R.id.magnetometerThresholdEditText)
+        lightSensorThresholdEditText = findViewById(R.id.lightSensorThresholdEditText)
+        proximityThresholdEditText = findViewById(R.id.proximityThresholdEditText)
+        pressureThresholdEditText = findViewById(R.id.pressureThresholdEditText)
+        temperatureThresholdEditText = findViewById(R.id.temperatureThresholdEditText)
+        humidityThresholdEditText = findViewById(R.id.humidityThresholdEditText)
 
-        // Valores por defecto solicitados
-        ipEditText.setText("192.168.0.5")
-        portEditText.setText("9000")
+        // Cargar valores persistidos desde SharedPreferences
+        ipEditText.setText(preferencesManager.getServerIP())
+        portEditText.setText(preferencesManager.getServerPort().toString())
+        samplingRateEditText.setText(preferencesManager.getSamplingRate().toString())
+        normalizeCheckBox.isChecked = preferencesManager.getNormalizeEnabled()
+        
+        // Cargar umbrales persistidos
+        accelerometerThresholdEditText.setText(preferencesManager.getSensorThreshold("accelerometer").toString())
+        gyroscopeThresholdEditText.setText(preferencesManager.getSensorThreshold("gyroscope").toString())
+        magnetometerThresholdEditText.setText(preferencesManager.getSensorThreshold("magnetometer").toString())
+        lightSensorThresholdEditText.setText(preferencesManager.getSensorThreshold("light").toString())
+        proximityThresholdEditText.setText(preferencesManager.getSensorThreshold("proximity").toString())
+        pressureThresholdEditText.setText(preferencesManager.getSensorThreshold("pressure").toString())
+        temperatureThresholdEditText.setText(preferencesManager.getSensorThreshold("temperature").toString())
+        humidityThresholdEditText.setText(preferencesManager.getSensorThreshold("humidity").toString())
+
+        // Agregar TextWatchers para guardar automáticamente cambios en configuración general
+        ipEditText.addTextChangedListener(createTextWatcher { preferencesManager.saveServerIP(it) })
+        portEditText.addTextChangedListener(createTextWatcher { 
+            it.toIntOrNull()?.let { port -> preferencesManager.saveServerPort(port) }
+        })
+        samplingRateEditText.addTextChangedListener(createTextWatcher {
+            it.toLongOrNull()?.let { rate -> preferencesManager.saveSamplingRate(rate) }
+        })
+        
+        // Agregar TextWatchers para guardar automáticamente cambios en umbrales
+        accelerometerThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("accelerometer", threshold) }
+        })
+        gyroscopeThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("gyroscope", threshold) }
+        })
+        magnetometerThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("magnetometer", threshold) }
+        })
+        lightSensorThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("light", threshold) }
+        })
+        proximityThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("proximity", threshold) }
+        })
+        pressureThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("pressure", threshold) }
+        })
+        temperatureThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("temperature", threshold) }
+        })
+        humidityThresholdEditText.addTextChangedListener(createTextWatcher {
+            it.toFloatOrNull()?.let { threshold -> preferencesManager.saveSensorThreshold("humidity", threshold) }
+        })
+
+        // Setup Switch listener
+        sendSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                startSending()
+            } else {
+                stopSending()
+            }
+        }
+        
+        // Setup normalize checkbox listener
+        normalizeCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveNormalizeEnabled(isChecked)
+        }
+    }
+
+    /**
+     * Helper para crear un TextWatcher que guarda valores automáticamente
+     */
+    private fun createTextWatcher(onTextChanged: (String) -> Unit): TextWatcher {
+        return object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                onTextChanged(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        }
     }
 
     private fun initializeSensors() {
@@ -123,32 +226,117 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         pressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
         temperatureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
         humiditySensor = sensorManager.getDefaultSensor(Sensor.TYPE_RELATIVE_HUMIDITY)
+        
+        // Cargar estados persistidos de los checkboxes de sensores
+        val accelerometerCheckBox = findViewById<CheckBox>(R.id.accelerometerCheckBox)
+        val gyroscopeCheckBox = findViewById<CheckBox>(R.id.gyroscopeCheckBox)
+        val magnetometerCheckBox = findViewById<CheckBox>(R.id.magnetometerCheckBox)
+        val lightSensorCheckBox = findViewById<CheckBox>(R.id.lightSensorCheckBox)
+        val proximityCheckBox = findViewById<CheckBox>(R.id.proximityCheckBox)
+        val pressureCheckBox = findViewById<CheckBox>(R.id.pressureCheckBox)
+        val temperatureCheckBox = findViewById<CheckBox>(R.id.temperatureCheckBox)
+        val humidityCheckBox = findViewById<CheckBox>(R.id.humidityCheckBox)
+        
+        accelerometerCheckBox.isChecked = preferencesManager.getSensorEnabled("accelerometer")
+        gyroscopeCheckBox.isChecked = preferencesManager.getSensorEnabled("gyroscope")
+        magnetometerCheckBox.isChecked = preferencesManager.getSensorEnabled("magnetometer")
+        lightSensorCheckBox.isChecked = preferencesManager.getSensorEnabled("light")
+        proximityCheckBox.isChecked = preferencesManager.getSensorEnabled("proximity")
+        pressureCheckBox.isChecked = preferencesManager.getSensorEnabled("pressure")
+        temperatureCheckBox.isChecked = preferencesManager.getSensorEnabled("temperature")
+        humidityCheckBox.isChecked = preferencesManager.getSensorEnabled("humidity")
+        
+        // Agregar listeners para guardar cambios en estado de sensores
+        accelerometerCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("accelerometer", isChecked)
+        }
+        gyroscopeCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("gyroscope", isChecked)
+        }
+        magnetometerCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("magnetometer", isChecked)
+        }
+        lightSensorCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("light", isChecked)
+        }
+        proximityCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("proximity", isChecked)
+        }
+        pressureCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("pressure", isChecked)
+        }
+        temperatureCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("temperature", isChecked)
+        }
+        humidityCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            preferencesManager.saveSensorEnabled("humidity", isChecked)
+        }
     }
 
-    private fun setupButtonListeners() {
-        // Switch de enviar/no enviar
-        sendSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                startSending()
-                startStopButton.text = "Stop Sending"
+    // Normalization ranges for different sensors (min, max)
+    private val normalizationRanges = mapOf(
+        "accelerometer" to Pair(-10f, 10f),
+        "gyroscope" to Pair(-34.9f, 34.9f),
+        "magnetometer" to Pair(-200f, 200f),
+        "light" to Pair(0f, 1f),  // Special: uses logarithmic scale, not linear
+        "proximity" to Pair(0f, 10f),
+        "pressure" to Pair(300f, 1100f),
+        "temperature" to Pair(-40f, 85f),
+        "humidity" to Pair(0f, 100f)
+    )
+
+    // Normalize a single value to 0-1 range
+    private fun normalizeValue(sensorType: String, value: Float): Float {
+        if (sensorType == "light") {
+            // Light uses logarithmic scale: 0-1 lux → 0, 1-10 lux → 0.2, 10-100 lux → 0.4, 
+            // 100-1000 lux → 0.6, 1000-10000 lux → 0.8, 10000+ lux → 1
+            return if (value <= 0f) {
+                0f
             } else {
-                stopSending()
-                startStopButton.text = "Start Sending"
-            }
+                val logValue = kotlin.math.log10(value.coerceAtLeast(1f))
+                (logValue + 1f) / 6f  // Range: log10(1)=-0, log10(100000)=5, normalized to 0-1
+            }.coerceIn(0f, 1f)
         }
-
-        // El botón alterna el estado del switch
-        startStopButton.setOnClickListener {
-            sendSwitch.isChecked = !sendSwitch.isChecked
-        }
+        
+        val range = normalizationRanges[sensorType] ?: return value
+        val min = range.first
+        val max = range.second
+        return ((value - min) / (max - min)).coerceIn(0f, 1f)
     }
 
-    // Helper function to detect if a 3-value sensor has changed
+    // Normalize an array of values (for 3-axis sensors)
+    private fun normalizeArray(sensorType: String, values: FloatArray): FloatArray {
+        return values.map { normalizeValue(sensorType, it) }.toFloatArray()
+    }
+
+    // Check if normalized 3-value sensor has changed beyond threshold
+    private fun hasNormalizedArrayChanged(current: FloatArray, previous: FloatArray, sensorType: String, threshold: Float): Boolean {
+        val normalizedCurrent = normalizeArray(sensorType, current)
+        val normalizedPrevious = normalizeArray(sensorType, previous)
+        
+        // Calculate max difference across all 3 axes
+        val maxDiff = maxOf(
+            kotlin.math.abs(normalizedCurrent[0] - normalizedPrevious[0]),
+            kotlin.math.abs(normalizedCurrent[1] - normalizedPrevious[1]),
+            kotlin.math.abs(normalizedCurrent[2] - normalizedPrevious[2])
+        )
+        return maxDiff > threshold
+    }
+
+    // Check if normalized single-value sensor has changed beyond threshold
+    private fun hasNormalizedFloatChanged(current: Float, previous: Float, sensorType: String, threshold: Float): Boolean {
+        val normalizedCurrent = normalizeValue(sensorType, current)
+        val normalizedPrevious = normalizeValue(sensorType, previous)
+        val diff = kotlin.math.abs(normalizedCurrent - normalizedPrevious)
+        return diff > threshold
+    }
+
+    // Helper function to detect if a 3-value sensor has changed (without threshold)
     private fun hasFloatArrayChanged(current: FloatArray, previous: FloatArray): Boolean {
         return current[0] != previous[0] || current[1] != previous[1] || current[2] != previous[2]
     }
 
-    // Helper function to detect if a single-value sensor has changed
+    // Helper function to detect if a single-value sensor has changed (without threshold)
     private fun hasFloatChanged(current: Float, previous: Float): Boolean {
         return current != previous
     }
@@ -157,14 +345,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val ip = ipEditText.text.toString()
         val port = portEditText.text.toString().toIntOrNull() ?: 9000
         samplingRate = samplingRateEditText.text.toString().toLongOrNull() ?: 200L
+        
+        // Load thresholds from EditTexts
+        accelerometerThreshold = accelerometerThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        gyroscopeThreshold = gyroscopeThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        magnetometerThreshold = magnetometerThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        lightThreshold = lightSensorThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        proximityThreshold = proximityThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        pressureThreshold = pressureThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        temperatureThreshold = temperatureThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
+        humidityThreshold = humidityThresholdEditText.text.toString().toFloatOrNull() ?: 0.05f
 
         android.util.Log.i("MainActivity", "Starting to send OSC to $ip:$port with sampling rate ${samplingRate}ms")
 
         // Hilo en segundo plano para operaciones de red
         oscThread = HandlerThread("OSCThread").apply { start() }
         oscHandler = Handler(oscThread!!.looper)
-
-        statusTextView.text = "Status: Connecting to $ip:$port"
 
         oscHandler?.post {
             android.util.Log.d("MainActivity", "OSC thread started: ${Thread.currentThread().name}")
@@ -176,8 +372,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 
                 runOnUiThread {
                     isSending = true
-                    startStopButton.text = "Stop Sending"
-                    statusTextView.text = "Status: Connected to $ip:$port"
                     android.util.Log.i("MainActivity", "isSending set to true, registering sensor listeners")
                     registerSensorListeners()
                 }
@@ -186,7 +380,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "Error connecting: ${e.message}", Toast.LENGTH_SHORT).show()
                     sendSwitch.isChecked = false
-                    statusTextView.text = "Status: Error connecting"
                 }
             }
         }
@@ -194,8 +387,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun stopSending() {
         isSending = false
-        startStopButton.text = "Start Sending"
-        statusTextView.text = "Status: Stopped"
         unregisterSensorListeners()
         oscClient?.close()
         oscClient = null
@@ -318,65 +509,126 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 val pressureCheckBox = findViewById<CheckBox>(R.id.pressureCheckBox)
                 val temperatureCheckBox = findViewById<CheckBox>(R.id.temperatureCheckBox)
                 val humidityCheckBox = findViewById<CheckBox>(R.id.humidityCheckBox)
+                val normalize = normalizeCheckBox.isChecked
 
-                android.util.Log.v("MainActivity", "CheckBoxes: accel=${accelerometerCheckBox.isChecked}, gyro=${gyroscopeCheckBox.isChecked}, mag=${magnetometerCheckBox.isChecked}")
+                android.util.Log.v("MainActivity", "CheckBoxes: accel=${accelerometerCheckBox.isChecked}, gyro=${gyroscopeCheckBox.isChecked}, mag=${magnetometerCheckBox.isChecked}, normalize=$normalize")
 
-                // Send only if value has changed since last read
-                if (accelerometerCheckBox.isChecked && hasFloatArrayChanged(accelerometerData, lastAccelerometerData)) {
-                    android.util.Log.d("MainActivity", "Sending accelerometer: ${accelerometerData.toList()}")
-                    oscClient?.send("/sensors/accelerometer", listOf(accelerometerData[0], accelerometerData[1], accelerometerData[2]))
-                    lastAccelerometerData = accelerometerData.clone()
+                // Send only if value has changed since last read (with threshold for normalized values)
+                if (accelerometerCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedArrayChanged(accelerometerData, lastAccelerometerData, "accelerometer", accelerometerThreshold)
+                    } else {
+                        hasFloatArrayChanged(accelerometerData, lastAccelerometerData)
+                    }
+                    if (hasChanged) {
+                        val valuestoSend = if (normalize) normalizeArray("accelerometer", accelerometerData) else accelerometerData
+                        android.util.Log.d("MainActivity", "Sending accelerometer: ${valuestoSend.toList()}")
+                        oscClient?.send("/sensors/accelerometer", listOf(valuestoSend[0], valuestoSend[1], valuestoSend[2]))
+                        lastAccelerometerData = accelerometerData.clone()
+                    }
                 }
 
-                if (gyroscopeCheckBox.isChecked && hasFloatArrayChanged(gyroscopeData, lastGyroscopeData)) {
-                    android.util.Log.d("MainActivity", "Sending gyroscope: ${gyroscopeData.toList()}")
-                    oscClient?.send("/sensors/gyroscope", listOf(gyroscopeData[0], gyroscopeData[1], gyroscopeData[2]))
-                    lastGyroscopeData = gyroscopeData.clone()
+                if (gyroscopeCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedArrayChanged(gyroscopeData, lastGyroscopeData, "gyroscope", gyroscopeThreshold)
+                    } else {
+                        hasFloatArrayChanged(gyroscopeData, lastGyroscopeData)
+                    }
+                    if (hasChanged) {
+                        val valuestoSend = if (normalize) normalizeArray("gyroscope", gyroscopeData) else gyroscopeData
+                        android.util.Log.d("MainActivity", "Sending gyroscope: ${valuestoSend.toList()}")
+                        oscClient?.send("/sensors/gyroscope", listOf(valuestoSend[0], valuestoSend[1], valuestoSend[2]))
+                        lastGyroscopeData = gyroscopeData.clone()
+                    }
                 }
 
-                if (magnetometerCheckBox.isChecked && hasFloatArrayChanged(magnetometerData, lastMagnetometerData)) {
-                    android.util.Log.d("MainActivity", "Sending magnetometer: ${magnetometerData.toList()}")
-                    oscClient?.send("/sensors/magnetometer", listOf(magnetometerData[0], magnetometerData[1], magnetometerData[2]))
-                    lastMagnetometerData = magnetometerData.clone()
+                if (magnetometerCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedArrayChanged(magnetometerData, lastMagnetometerData, "magnetometer", magnetometerThreshold)
+                    } else {
+                        hasFloatArrayChanged(magnetometerData, lastMagnetometerData)
+                    }
+                    if (hasChanged) {
+                        val valuestoSend = if (normalize) normalizeArray("magnetometer", magnetometerData) else magnetometerData
+                        android.util.Log.d("MainActivity", "Sending magnetometer: ${valuestoSend.toList()}")
+                        oscClient?.send("/sensors/magnetometer", listOf(valuestoSend[0], valuestoSend[1], valuestoSend[2]))
+                        lastMagnetometerData = magnetometerData.clone()
+                    }
                 }
 
-                if (lightSensorCheckBox.isChecked && hasFloatChanged(lightData, lastLightData)) {
-                    android.util.Log.d("MainActivity", "Sending light: $lightData")
-                    oscClient?.send("/sensors/light", listOf(lightData))
-                    lastLightData = lightData
+                if (lightSensorCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedFloatChanged(lightData, lastLightData, "light", lightThreshold)
+                    } else {
+                        hasFloatChanged(lightData, lastLightData)
+                    }
+                    if (hasChanged) {
+                        val valuetoSend = if (normalize) normalizeValue("light", lightData) else lightData
+                        android.util.Log.d("MainActivity", "Sending light: $valuetoSend")
+                        oscClient?.send("/sensors/light", listOf(valuetoSend))
+                        lastLightData = lightData
+                    }
                 }
 
-                if (proximityCheckBox.isChecked && hasFloatChanged(proximityData, lastProximityData)) {
-                    android.util.Log.d("MainActivity", "Sending proximity: $proximityData")
-                    oscClient?.send("/sensors/proximity", listOf(proximityData))
-                    lastProximityData = proximityData
+                if (proximityCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedFloatChanged(proximityData, lastProximityData, "proximity", proximityThreshold)
+                    } else {
+                        hasFloatChanged(proximityData, lastProximityData)
+                    }
+                    if (hasChanged) {
+                        val valuetoSend = if (normalize) normalizeValue("proximity", proximityData) else proximityData
+                        android.util.Log.d("MainActivity", "Sending proximity: $valuetoSend")
+                        oscClient?.send("/sensors/proximity", listOf(valuetoSend))
+                        lastProximityData = proximityData
+                    }
                 }
 
-                if (pressureCheckBox.isChecked && hasFloatChanged(pressureData, lastPressureData)) {
-                    android.util.Log.d("MainActivity", "Sending pressure: $pressureData")
-                    oscClient?.send("/sensors/pressure", listOf(pressureData))
-                    lastPressureData = pressureData
+                if (pressureCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedFloatChanged(pressureData, lastPressureData, "pressure", pressureThreshold)
+                    } else {
+                        hasFloatChanged(pressureData, lastPressureData)
+                    }
+                    if (hasChanged) {
+                        val valuetoSend = if (normalize) normalizeValue("pressure", pressureData) else pressureData
+                        android.util.Log.d("MainActivity", "Sending pressure: $valuetoSend")
+                        oscClient?.send("/sensors/pressure", listOf(valuetoSend))
+                        lastPressureData = pressureData
+                    }
                 }
 
-                if (temperatureCheckBox.isChecked && hasFloatChanged(temperatureData, lastTemperatureData)) {
-                    android.util.Log.d("MainActivity", "Sending temperature: $temperatureData")
-                    oscClient?.send("/sensors/temperature", listOf(temperatureData))
-                    lastTemperatureData = temperatureData
+                if (temperatureCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedFloatChanged(temperatureData, lastTemperatureData, "temperature", temperatureThreshold)
+                    } else {
+                        hasFloatChanged(temperatureData, lastTemperatureData)
+                    }
+                    if (hasChanged) {
+                        val valuetoSend = if (normalize) normalizeValue("temperature", temperatureData) else temperatureData
+                        android.util.Log.d("MainActivity", "Sending temperature: $valuetoSend")
+                        oscClient?.send("/sensors/temperature", listOf(valuetoSend))
+                        lastTemperatureData = temperatureData
+                    }
                 }
 
-                if (humidityCheckBox.isChecked && hasFloatChanged(humidityData, lastHumidityData)) {
-                    android.util.Log.d("MainActivity", "Sending humidity: $humidityData")
-                    oscClient?.send("/sensors/humidity", listOf(humidityData))
-                    lastHumidityData = humidityData
+                if (humidityCheckBox.isChecked) {
+                    val hasChanged = if (normalize) {
+                        hasNormalizedFloatChanged(humidityData, lastHumidityData, "humidity", humidityThreshold)
+                    } else {
+                        hasFloatChanged(humidityData, lastHumidityData)
+                    }
+                    if (hasChanged) {
+                        val valuetoSend = if (normalize) normalizeValue("humidity", humidityData) else humidityData
+                        android.util.Log.d("MainActivity", "Sending humidity: $valuetoSend")
+                        oscClient?.send("/sensors/humidity", listOf(valuetoSend))
+                        lastHumidityData = humidityData
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MainActivity", "Error in sendOSCMessages: ${e.message}", e)
             }
         }
-    }
-
-    private fun sendSafeOSCMessage(address: String, values: List<Float>) {
-        // Deprecated - using oscClient.send() directly now
     }
 
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
