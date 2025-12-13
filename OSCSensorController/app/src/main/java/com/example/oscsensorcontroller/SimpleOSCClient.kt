@@ -33,7 +33,7 @@ class SimpleOSCClient(private val address: InetAddress, private val port: Int) {
         }
     }
     
-    fun send(path: String, values: List<Float>) {
+    fun send(path: String, values: List<Any>) {
         if (!isConnected || socket == null || socket?.isClosed == true) {
             android.util.Log.w(TAG, "✗ Cannot send: isConnected=$isConnected, socket=$socket, isClosed=${socket?.isClosed}")
             return
@@ -71,7 +71,7 @@ class SimpleOSCClient(private val address: InetAddress, private val port: Int) {
         socket = null
     }
     
-    private fun encodeOSCMessage(path: String, values: List<Float>): ByteArray {
+    private fun encodeOSCMessage(path: String, values: List<Any>): ByteArray {
         val output = ByteArrayOutputStream()
         
         try {
@@ -89,10 +89,14 @@ class SimpleOSCClient(private val address: InetAddress, private val port: Int) {
             
             android.util.Log.v(TAG, "Encoded path: '$path' (${pathLength} bytes + ${pathPadded - pathLength} padding)")
             
-            // Encode type tag string - each float is represented as 'f'
+            // Encode type tag string
             val typeTagBuilder = StringBuilder(",")
-            repeat(values.size) {
-                typeTagBuilder.append("f")
+            for (value in values) {
+                when (value) {
+                    is Float -> typeTagBuilder.append("f")
+                    is Int -> typeTagBuilder.append("i")
+                    else -> android.util.Log.w(TAG, "Unsupported type: ${value.javaClass.simpleName}")
+                }
             }
             val typeTag = typeTagBuilder.toString()
             val typeTagBytes = typeTag.toByteArray(Charsets.UTF_8)
@@ -108,14 +112,24 @@ class SimpleOSCClient(private val address: InetAddress, private val port: Int) {
             
             android.util.Log.v(TAG, "Encoded type tag: '$typeTag' (${typeTagLength} bytes + ${typeTagPadded - typeTagLength} padding)")
             
-            // Encode float values in big-endian (OSC standard)
+            // Encode values in big-endian (OSC standard)
             for (value in values) {
-                val floatBytes = ByteBuffer.allocate(4).putFloat(value).array()
-                output.write(floatBytes)
-                android.util.Log.v(TAG, "Encoded float: $value")
+                when (value) {
+                    is Float -> {
+                        val floatBytes = ByteBuffer.allocate(4).putFloat(value).array()
+                        output.write(floatBytes)
+                        android.util.Log.v(TAG, "Encoded float: $value")
+                    }
+                    is Int -> {
+                        val intBytes = ByteBuffer.allocate(4).putInt(value).array()
+                        output.write(intBytes)
+                        android.util.Log.v(TAG, "Encoded int: $value")
+                    }
+                    // TODO: Support other types if needed
+                }
             }
             
-            android.util.Log.i(TAG, "✓ OSC message encoded: path=$path, floats=${values.size}, totalBytes=${output.size()}")
+            android.util.Log.i(TAG, "✓ OSC message encoded: path=$path, values=${values.size}, totalBytes=${output.size()}")
             
         } catch (e: Exception) {
             android.util.Log.e(TAG, "✗ Error encoding OSC message: ${e.message}", e)

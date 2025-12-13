@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".PianoActivity">
+
+    <!-- Controls Layer (Top Left) -->
+    <LinearLayout
+        android:id="@+id/controlsLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:background="#80000000"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Button
+            android:id="@+id/octaveDownButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="-" />
+
+        <TextView
+            android:id="@+id/octaveLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="C3"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/octaveUpButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="+" />
+
+        <CheckBox
+            android:id="@+id/pitchCheckBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:checked="true"
+            android:text="Pitch"
+            android:textColor="#FFFFFF" />
+
+        <CheckBox
+            android:id="@+id/cc1CheckBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:checked="true"
+            android:text="CC1"
+            android:textColor="#FFFFFF" />
+
+        <!-- Octave Count Controls -->
+        <Button
+            android:id="@+id/octaveCountDownButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="-" />
+
+        <TextView
+            android:id="@+id/octaveCountLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="2 Oct"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/octaveCountUpButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="+" />
+            
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Back" />
+
+    </LinearLayout>
+
+    <!-- Piano Constraints -->
+    <com.example.oscsensorcontroller.PianoTouchView
+        android:id="@+id/touchView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/controlsLayout" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

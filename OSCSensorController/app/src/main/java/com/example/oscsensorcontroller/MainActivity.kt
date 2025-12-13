@@ -214,6 +214,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
         
+        // Setup Piano Mode Button
+        findViewById<Button>(R.id.pianoModeButton).setOnClickListener {
+            val intent = android.content.Intent(this, PianoActivity::class.java)
+            startActivity(intent)
+        }
+        
         // Setup normalize checkbox listener
         normalizeCheckBox.setOnCheckedChangeListener { _, isChecked ->
             preferencesManager.saveNormalizeEnabled(isChecked)

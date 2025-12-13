@@ -18,6 +18,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".PianoActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|keyboardHidden|screenSize"/>
+
     </application>
 
 </manifest>

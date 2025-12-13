@@ -36,7 +36,7 @@ if exist "%PROJECT_DIR%\gradlew.bat" (
 
 pushd "%PROJECT_DIR%"
 echo [INFO] Building debug APK...
-%GRADLE_CMD% assembleDebug
+%GRADLE_CMD% assembleDebug --stacktrace --info
 if %ERRORLEVEL% NEQ 0 (
   echo [ERROR] Build failed.
   popd
