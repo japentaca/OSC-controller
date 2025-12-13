@@ -23,7 +23,9 @@ class PianoActivity : AppCompatActivity() {
 
     private var currentOctave = 3 // Standard middle C octave
     private var baseNote = 48 // C3
+
     private var visibleOctaveCount = 2 // Default
+    private var baseVelocity = 30 // Default base velocity
     
     // View reference
     private lateinit var touchView: PianoTouchView
@@ -32,7 +34,9 @@ class PianoActivity : AppCompatActivity() {
     private var sendCC1 = true
 
     private lateinit var octaveLabel: TextView
+
     private lateinit var octaveCountLabel: TextView
+    private lateinit var velLabel: TextView
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,11 +47,14 @@ class PianoActivity : AppCompatActivity() {
 
         touchView = findViewById(R.id.touchView) // Initialize view reference
         octaveLabel = findViewById(R.id.octaveLabel)
+
         octaveCountLabel = findViewById(R.id.octaveCountLabel)
+        velLabel = findViewById(R.id.velLabel)
         
         // Initial setup
         updateOctaveDisplay() // This will set baseNote and update view
         updateOctaveCountDisplay()
+        updateVelocityDisplay()
 
         setupControls()
         setupOSC()
@@ -100,6 +107,21 @@ class PianoActivity : AppCompatActivity() {
             sendCC1 = isChecked
         }
 
+        // Base Velocity Controls
+        findViewById<Button>(R.id.velUpButton).setOnClickListener {
+            if (baseVelocity < 127) {
+                baseVelocity++
+                updateVelocityDisplay()
+            }
+        }
+
+        findViewById<Button>(R.id.velDownButton).setOnClickListener {
+            if (baseVelocity > 0) {
+                baseVelocity--
+                updateVelocityDisplay()
+            }
+        }
+
         findViewById<Button>(R.id.backButton).setOnClickListener {
             finish()
         }
@@ -117,6 +139,10 @@ class PianoActivity : AppCompatActivity() {
     private fun updateOctaveCountDisplay() {
         octaveCountLabel.text = "${visibleOctaveCount} Oct"
         touchView.visibleOctaveCount = visibleOctaveCount
+    }
+
+    private fun updateVelocityDisplay() {
+        velLabel.text = "Vel: $baseVelocity"
     }
 
     private fun setupOSC() {
@@ -152,9 +178,20 @@ class PianoActivity : AppCompatActivity() {
                 
                 // Calculate velocity based on Y position (0-127)
                 // Matching CC1 logic: Top (relativeY=0) -> 127, Bottom (relativeY=1) -> 0
-                val velocity = ((1f - relativeY) * 127f).coerceIn(0f, 127f)
+                
+                var adjustedY = relativeY
+                if (isBlackKey(note)) {
+                     // Black keys are only ~60% of the screen height. 
+                     // We need to map 0..0.6 to 0..1 to get full velocity range.
+                     // 0.6 is the blackKeyHeightRatio from PianoTouchView
+                     val blackKeyHeight = 0.6f 
+                     adjustedY = (relativeY / blackKeyHeight).coerceIn(0f, 1f)
+                }
 
-                sendNoteOn(note.toFloat(), velocity)
+                val touchVelocity = ((1f - adjustedY) * 127f).coerceIn(0f, 127f)
+                val finalVelocity = (touchVelocity + baseVelocity).coerceIn(1f, 127f)
+
+                sendNoteOn(note.toFloat(), finalVelocity)
                 
                 // Track active note for this pointer
                 activePointerNotes[pointerId] = note
@@ -237,5 +274,14 @@ class PianoActivity : AppCompatActivity() {
         super.onDestroy()
         oscClient?.close()
         oscThread?.quitSafely()
+    }
+
+    private fun isBlackKey(note: Int): Boolean {
+        val noteInOctave = note % 12
+        // Black keys: 1(C#), 3(D#), 6(F#), 8(G#), 10(A#)
+        return when (noteInOctave) {
+            1, 3, 6, 8, 10 -> true
+            else -> false
+        }
     }
 }

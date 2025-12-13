@@ -60,6 +60,32 @@
             android:text="CC1"
             android:textColor="#FFFFFF" />
 
+        <!-- Base Velocity Controls -->
+        <Button
+            android:id="@+id/velDownButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="-" />
+
+        <TextView
+            android:id="@+id/velLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="Vel: 30"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/velUpButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="+" />
+
         <!-- Octave Count Controls -->
         <Button
             android:id="@+id/octaveCountDownButton"
