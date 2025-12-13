@@ -94,7 +94,7 @@ class PianoTouchView @JvmOverloads constructor(
     }
 
     private fun calculateLayout(w: Int, h: Int) {
-        numWhiteKeys = visibleOctaveCount * 7
+        numWhiteKeys = visibleOctaveCount * 7 + 1
         whiteKeyWidth = w.toFloat() / numWhiteKeys
         
         blackKeyWidth = whiteKeyWidth * blackKeyWidthRatio
