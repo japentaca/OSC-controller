@@ -35,8 +35,8 @@ if exist "%PROJECT_DIR%\gradlew.bat" (
 )
 
 pushd "%PROJECT_DIR%"
-echo [INFO] Building debug APK...
-%GRADLE_CMD% assembleDebug --stacktrace --info
+echo [INFO] Cleaning and Building (Clean Build)...
+%GRADLE_CMD% clean assembleDebug --info --console=plain
 if %ERRORLEVEL% NEQ 0 (
   echo [ERROR] Build failed.
   popd
@@ -69,6 +69,9 @@ if not exist "%APK%" (
   popd
   exit /b 1
 )
+
+echo [INFO] Uninstalling previous version...
+adb uninstall com.example.oscsensorcontroller
 
 echo [INFO] Installing APK on device...
 adb install -r "%APK%"

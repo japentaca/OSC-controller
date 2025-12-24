@@ -14,6 +14,9 @@ import androidx.appcompat.app.AppCompatActivity
 import java.net.InetAddress
 import android.text.Editable
 import android.text.TextWatcher
+import androidx.core.app.ActivityCompat
+import android.content.pm.PackageManager
+import android.Manifest
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -62,7 +65,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var oscThread: HandlerThread? = null
     private var oscHandler: Handler? = null
 
-    private var oscClient: SimpleOSCClient? = null
+    private var oscClient: DataSender? = null
     private var isSending = false
     private var samplingRate = 200L // milliseconds
     private var lastSendTime = 0L
@@ -389,9 +392,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         oscHandler?.post {
             android.util.Log.d("MainActivity", "OSC thread started: ${Thread.currentThread().name}")
             try {
-                val address = InetAddress.getByName(ip)
-                android.util.Log.i("MainActivity", "Resolved IP address: ${address.hostAddress}")
-                oscClient = SimpleOSCClient(address, port)
+                val isBluetooth = findViewById<RadioButton>(R.id.bluetoothRadioButton).isChecked
+                
+                if (isBluetooth) {
+                    if (hasBluetoothPermissions()) {
+                        android.util.Log.i("MainActivity", "Starting Bluetooth Sender")
+                        oscClient = BlePeripheralSender(this@MainActivity)
+                    } else {
+                        android.util.Log.w("MainActivity", "Missing Bluetooth permissions")
+                        requestBluetoothPermissions()
+                        return@post
+                    }
+                } else {
+                    val address = InetAddress.getByName(ip)
+                    android.util.Log.i("MainActivity", "Resolved IP address: ${address.hostAddress}")
+                    oscClient = SimpleOSCClient(address, port)
+                }
+                
                 oscClient?.connect()
                 
                 runOnUiThread {
@@ -400,7 +417,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     registerSensorListeners()
                 }
             } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Error connecting to OSC server: ${e.message}", e)
+                android.util.Log.e("MainActivity", "Error connecting: ${e.message}", e)
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "Error connecting: ${e.message}", Toast.LENGTH_SHORT).show()
                     sendSwitch.isChecked = false
@@ -657,6 +674,76 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
         // Not used in this implementation
+    }
+
+    private fun hasBluetoothPermissions(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            return ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED &&
+                   ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        }
+        return true
+    }
+
+    private fun requestBluetoothPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val permissionsToRequest = arrayOf(
+                android.Manifest.permission.BLUETOOTH_ADVERTISE,
+                android.Manifest.permission.BLUETOOTH_CONNECT
+            )
+            
+            val shouldShowRationale = permissionsToRequest.any { 
+                ActivityCompat.shouldShowRequestPermissionRationale(this, it) 
+            }
+
+            if (shouldShowRationale) {
+                // Show explanation then request
+                Toast.makeText(this, "Bluetooth permissions are required for BLE functionality.", Toast.LENGTH_LONG).show()
+                ActivityCompat.requestPermissions(this, permissionsToRequest, 101)
+            } else {
+                // No rationale means either first time OR "Don't ask again" checked.
+                // We request anyway. If "Don't ask again" was checked, this will immediately call onRequestPermissionsResult with denied.
+                ActivityCompat.requestPermissions(this, permissionsToRequest, 101)
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                android.util.Log.i("MainActivity", "Bluetooth permissions granted")
+                startSending()
+            } else {
+                // Permissions denied
+                val showRationale = permissions.any { 
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && 
+                    ActivityCompat.shouldShowRequestPermissionRationale(this, it) 
+                }
+
+                if (!showRationale) {
+                    // User selected "Don't ask again" or verified permanent denial
+                    android.util.Log.w("MainActivity", "Bluetooth permissions permanently denied")
+                    Toast.makeText(this, "Permissions denied. Please enable 'Nearby Devices' in Settings.", Toast.LENGTH_LONG).show()
+                    openAppSettings()
+                } else {
+                    Toast.makeText(this, "Bluetooth permissions required", Toast.LENGTH_SHORT).show()
+                }
+                
+                // Reset switch
+                sendSwitch.isChecked = false
+            }
+        }
+    }
+
+    private fun openAppSettings() {
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            val uri = android.net.Uri.fromParts("package", packageName, null)
+            intent.data = uri
+            startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error opening settings", e)
+        }
     }
 
     override fun onDestroy() {

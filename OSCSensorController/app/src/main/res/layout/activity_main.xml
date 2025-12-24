@@ -105,13 +105,36 @@
         android:backgroundTint="#FF5722"
         android:text="🎹 Piano Mode" />
 
+    <RadioGroup
+        android:id="@+id/protocolRadioGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <RadioButton
+            android:id="@+id/oscRadioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OSC (UDP)"
+            android:checked="true"
+            android:layout_weight="1" />
+
+        <RadioButton
+            android:id="@+id/bluetoothRadioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bluetooth LE"
+            android:layout_weight="1" />
+    </RadioGroup>
+
     <Switch
         android:id="@+id/sendSwitch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Enviar mensajes"
         android:checked="false"
-        android:layout_marginTop="16dp" />
+        android:layout_marginTop="8dp" />
 
     <CheckBox
         android:id="@+id/normalizeCheckBox"

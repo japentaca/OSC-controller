@@ -10,32 +10,36 @@ import java.nio.ByteBuffer
  * Simple OSC sender implementation without external library dependencies
  * This avoids the AWT class loading issue in JavaOSC library
  */
-class SimpleOSCClient(private val address: InetAddress, private val port: Int) {
+class SimpleOSCClient(private val address: InetAddress, private val port: Int) : DataSender {
     
     private var socket: DatagramSocket? = null
-    private var isConnected = false
+    private var _isConnected = false
     
     companion object {
         private const val TAG = "SimpleOSCClient"
     }
     
-    fun connect() {
+    override fun connect() {
         try {
             socket = DatagramSocket()
             socket?.broadcast = true
-            isConnected = true
+            _isConnected = true
             android.util.Log.i(TAG, "✓ Socket created successfully")
             android.util.Log.i(TAG, "✓ Connected to ${address.hostAddress}:$port")
             android.util.Log.d(TAG, "Socket details: isClosed=${socket?.isClosed}, port=${socket?.localPort}")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "✗ Failed to create socket: ${e.message}", e)
-            isConnected = false
+            _isConnected = false
         }
     }
+
+    override fun isConnected(): Boolean {
+        return _isConnected && socket != null && socket?.isClosed == false
+    }
     
-    fun send(path: String, values: List<Any>) {
-        if (!isConnected || socket == null || socket?.isClosed == true) {
-            android.util.Log.w(TAG, "✗ Cannot send: isConnected=$isConnected, socket=$socket, isClosed=${socket?.isClosed}")
+    override fun send(path: String, values: List<Any>) {
+        if (!isConnected()) {
+            android.util.Log.w(TAG, "✗ Cannot send: isConnected=$_isConnected, socket=$socket, isClosed=${socket?.isClosed}")
             return
         }
         
@@ -60,10 +64,10 @@ class SimpleOSCClient(private val address: InetAddress, private val port: Int) {
         }
     }
     
-    fun close() {
+    override fun close() {
         try {
             socket?.close()
-            isConnected = false
+            _isConnected = false
             android.util.Log.i(TAG, "✓ Socket closed successfully")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "✗ Error closing socket: ${e.message}")
