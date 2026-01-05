@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var samplingRateEditText: EditText
     private lateinit var sendSwitch: Switch
     private lateinit var normalizeCheckBox: CheckBox
+    private lateinit var oscConfigSection: LinearLayout
     
     // Threshold EditTexts for each sensor
     private lateinit var accelerometerThresholdEditText: EditText
@@ -146,6 +147,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         samplingRateEditText = findViewById(R.id.samplingRateEditText)
         sendSwitch = findViewById(R.id.sendSwitch)
         normalizeCheckBox = findViewById(R.id.normalizeCheckBox)
+        oscConfigSection = findViewById(R.id.oscConfigSection)
         
         // Initialize threshold EditTexts
         accelerometerThresholdEditText = findViewById(R.id.accelerometerThresholdEditText)
@@ -226,6 +228,35 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         // Setup normalize checkbox listener
         normalizeCheckBox.setOnCheckedChangeListener { _, isChecked ->
             preferencesManager.saveNormalizeEnabled(isChecked)
+        }
+        
+        // Setup radio group for communication mode
+        val radioGroup = findViewById<RadioGroup>(R.id.protocolRadioGroup)
+        val oscRadioButton = findViewById<RadioButton>(R.id.oscRadioButton)
+        val bleRadioButton = findViewById<RadioButton>(R.id.bluetoothRadioButton)
+        
+        // Load saved communication mode
+        val savedMode = preferencesManager.getCommunicationMode()
+        if (savedMode == "BLE") {
+            bleRadioButton.isChecked = true
+            oscConfigSection.visibility = LinearLayout.GONE
+        } else {
+            oscRadioButton.isChecked = true
+            oscConfigSection.visibility = LinearLayout.VISIBLE
+        }
+        
+        // Listen for mode changes
+        radioGroup.setOnCheckedChangeListener { _, checkedId ->
+            when (checkedId) {
+                R.id.oscRadioButton -> {
+                    preferencesManager.saveCommunicationMode("OSC")
+                    oscConfigSection.visibility = LinearLayout.VISIBLE
+                }
+                R.id.bluetoothRadioButton -> {
+                    preferencesManager.saveCommunicationMode("BLE")
+                    oscConfigSection.visibility = LinearLayout.GONE
+                }
+            }
         }
     }
 
@@ -392,7 +423,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         oscHandler?.post {
             android.util.Log.d("MainActivity", "OSC thread started: ${Thread.currentThread().name}")
             try {
-                val isBluetooth = findViewById<RadioButton>(R.id.bluetoothRadioButton).isChecked
+                val isBluetooth = preferencesManager.isBleMode()
                 
                 if (isBluetooth) {
                     if (hasBluetoothPermissions()) {

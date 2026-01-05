@@ -29,6 +29,7 @@ class BlePeripheralSender(private val context: Context) : DataSender {
     
     private val registeredDevices = mutableSetOf<BluetoothDevice>()
     private var isAdvertising = false
+    private var isServiceAdded = false
     
     // UUIDs
     private val SERVICE_UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb")
@@ -42,7 +43,11 @@ class BlePeripheralSender(private val context: Context) : DataSender {
         "/sensors/proximity" to UUID.fromString("0000ffe5-0000-1000-8000-00805f9b34fb"),
         "/sensors/pressure" to UUID.fromString("0000ffe6-0000-1000-8000-00805f9b34fb"),
         "/sensors/temperature" to UUID.fromString("0000ffe7-0000-1000-8000-00805f9b34fb"),
-        "/sensors/humidity" to UUID.fromString("0000ffe8-0000-1000-8000-00805f9b34fb")
+        "/sensors/humidity" to UUID.fromString("0000ffe8-0000-1000-8000-00805f9b34fb"),
+        "/note_on" to UUID.fromString("0000ffe9-0000-1000-8000-00805f9b34fb"),
+        "/note_off" to UUID.fromString("0000ffea-0000-1000-8000-00805f9b34fb"),
+        "/pitch_bend" to UUID.fromString("0000ffeb-0000-1000-8000-00805f9b34fb"),
+        "/cc/1" to UUID.fromString("0000ffec-0000-1000-8000-00805f9b34fb")
     )
 
     companion object {
@@ -61,8 +66,7 @@ class BlePeripheralSender(private val context: Context) : DataSender {
         // Setup GATT Server
         openGattServer()
         
-        // Start Advertising
-        startAdvertising()
+        // Advertising will start after service is added (see onServiceAdded callback)
     }
     
     private fun openGattServer() {
@@ -90,7 +94,8 @@ class BlePeripheralSender(private val context: Context) : DataSender {
         }
         
         gattServer?.addService(service)
-        Log.i(TAG, "GATT Server started with ${service.characteristics.size} characteristics")
+        Log.i(TAG, "Adding GATT service with ${service.characteristics.size} characteristics...")
+        // Service will be ready when onServiceAdded callback fires
     }
 
     private fun startAdvertising() {
@@ -108,33 +113,66 @@ class BlePeripheralSender(private val context: Context) : DataSender {
             .build()
 
         val data = AdvertiseData.Builder()
-            .setIncludeDeviceName(false) // False to avoid data too large (31 bytes limit)
+            .setIncludeDeviceName(true) // Show friendly name in device picker
             .addServiceUuid(ParcelUuid(SERVICE_UUID))
             .build()
+            
+        val scanResponse = AdvertiseData.Builder()
+            .setIncludeDeviceName(true) // Also in scan response
+            .build()
 
-        bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
+        bluetoothLeAdvertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
             Log.i(TAG, "BLE Advertising started")
             isAdvertising = true
+             android.os.Handler(android.os.Looper.getMainLooper()).post {
+                 android.widget.Toast.makeText(context, "BLE Adv Started", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
 
         override fun onStartFailure(errorCode: Int) {
             Log.e(TAG, "BLE Advertising failed: $errorCode")
             isAdvertising = false
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, "BLE Advertising Failed: Error $errorCode", android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 
     private val gattServerCallback = object : BluetoothGattServerCallback() {
+        override fun onServiceAdded(status: Int, service: BluetoothGattService) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.i(TAG, "Service added successfully: ${service.uuid}")
+                isServiceAdded = true
+                // Delay to ensure service is fully ready before advertising
+                // Testing showed console.log delays made it work - using 500ms to be safe
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    startAdvertising()
+                }, 500) // 500ms delay
+            } else {
+                Log.e(TAG, "Failed to add service: $status")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(context, "Failed to start BLE: Error $status", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.i(TAG, "Device connected: ${device.address}")
                 registeredDevices.add(device)
+                 android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(context, "Client Connected: ${device.address}", android.widget.Toast.LENGTH_SHORT).show()
+                }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i(TAG, "Device disconnected: ${device.address}")
                 registeredDevices.remove(device)
+                 android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(context, "Client Disconnected", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
         }
 

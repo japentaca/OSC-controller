@@ -13,6 +13,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.net.InetAddress
 import kotlin.math.abs
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 
 class PianoActivity : AppCompatActivity() {
 
@@ -20,6 +26,9 @@ class PianoActivity : AppCompatActivity() {
     private var oscClient: SimpleOSCClient? = null
     private var oscThread: HandlerThread? = null
     private var oscHandler: Handler? = null
+
+    private var bleSender: BlePeripheralSender? = null
+
 
     private var currentOctave = 3 // Standard middle C octave
     private var baseNote = 48 // C3
@@ -57,7 +66,19 @@ class PianoActivity : AppCompatActivity() {
         updateVelocityDisplay()
 
         setupControls()
-        setupOSC()
+        setupThreading()
+        
+        // Initialize communication based on global preference
+        if (preferencesManager.isBleMode()) {
+            if (hasBluetoothPermissions()) {
+                startBleSender()
+            } else {
+                requestBluetoothPermissions()
+            }
+        } else {
+            setupOSC()
+        }
+        
         setupTouchListener()
         
         // Init visual state
@@ -145,12 +166,16 @@ class PianoActivity : AppCompatActivity() {
         velLabel.text = "Vel: $baseVelocity"
     }
 
+    private fun setupThreading() {
+        oscThread = HandlerThread("PianoWorkerThread").apply { start() }
+        oscHandler = Handler(oscThread!!.looper)
+    }
+
     private fun setupOSC() {
         val ip = preferencesManager.getServerIP()
         val port = preferencesManager.getServerPort()
 
-        oscThread = HandlerThread("PianoOSCThread").apply { start() }
-        oscHandler = Handler(oscThread!!.looper)
+        // Thread is now initialized in setupThreading()
 
         oscHandler?.post {
             try {
@@ -249,24 +274,28 @@ class PianoActivity : AppCompatActivity() {
     private fun sendNoteOn(note: Float, velocity: Float) {
         oscHandler?.post {
             oscClient?.send("/note_on", listOf(note, velocity))
+            bleSender?.send("/note_on", listOf(note, velocity))
         }
     }
 
     private fun sendNoteOff(note: Float) {
         oscHandler?.post {
             oscClient?.send("/note_off", listOf(note, 0f))
+            bleSender?.send("/note_off", listOf(note, 0f))
         }
     }
 
     private fun sendPitchBend(value: Float) {
         oscHandler?.post {
             oscClient?.send("/pitch_bend", listOf(value))
+            bleSender?.send("/pitch_bend", listOf(value))
         }
     }
 
     private fun sendCC1(value: Float) {
         oscHandler?.post {
             oscClient?.send("/cc/1", listOf(value))
+            bleSender?.send("/cc/1", listOf(value))
         }
     }
 
@@ -274,6 +303,53 @@ class PianoActivity : AppCompatActivity() {
         super.onDestroy()
         oscClient?.close()
         oscThread?.quitSafely()
+        stopBleSender()
+    }
+
+    private fun startBleSender() {
+        if (bleSender == null) {
+            bleSender = BlePeripheralSender(this)
+            bleSender?.connect()
+            Toast.makeText(this, "BLE Sender Started", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun stopBleSender() {
+        bleSender?.close()
+        bleSender = null
+    }
+
+    private fun hasBluetoothPermissions(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            return ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED &&
+                   ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        }
+        return true
+    }
+
+    private fun requestBluetoothPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val permissionsToRequest = arrayOf(
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+            ActivityCompat.requestPermissions(this, permissionsToRequest, 102)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 102) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                startBleSender()
+            } else {
+                Toast.makeText(this, "Bluetooth permissions required for BLE", Toast.LENGTH_SHORT).show()
+                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.BLUETOOTH_ADVERTISE)) {
+                     // Permanently denied
+                     // openAppSettings() // Optional: ask user to go to settings
+                }
+            }
+        }
     }
 
     private fun isBlackKey(note: Int): Boolean {

@@ -13,38 +13,39 @@
             margin: 0 auto;
         }
 
+        #sensors {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
         .card {
             border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            padding: 8px;
+            margin: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            font-size: 0.9em;
+        }
+
+        .card h3 {
+            margin: 0 0 5px 0;
+            font-size: 1em;
+            color: #333;
         }
 
         .value {
             font-family: monospace;
             font-weight: bold;
             color: #007bff;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+            font-size: 1.1em;
+            word-break: break-all;
         }
 
         #status {
-            margin-top: 10px;
+            margin-top: 15px;
             font-weight: bold;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -70,7 +71,11 @@
             'proximity': '0000ffe5-0000-1000-8000-00805f9b34fb',
             'pressure': '0000ffe6-0000-1000-8000-00805f9b34fb',
             'temperature': '0000ffe7-0000-1000-8000-00805f9b34fb',
-            'humidity': '0000ffe8-0000-1000-8000-00805f9b34fb'
+            'humidity': '0000ffe8-0000-1000-8000-00805f9b34fb',
+            'note_on': '0000ffe9-0000-1000-8000-00805f9b34fb',
+            'note_off': '0000ffea-0000-1000-8000-00805f9b34fb',
+            'pitch_bend': '0000ffeb-0000-1000-8000-00805f9b34fb',
+            'cc_1': '0000ffec-0000-1000-8000-00805f9b34fb'
         };
 
         const sensorsDiv = document.getElementById('sensors');
@@ -90,23 +95,30 @@
         connectBtn.addEventListener('click', async () => {
             try {
                 statusDiv.textContent = 'Scanning...';
+                console.log('Requesting device...');
                 device = await navigator.bluetooth.requestDevice({
                     // filters: [{ services: [SERVICE_UUID] }],
                     acceptAllDevices: true,
                     optionalServices: [SERVICE_UUID]
                 });
+                console.log('Device selected:', device.name);
 
                 statusDiv.textContent = 'Connecting...';
                 device.addEventListener('gattserverdisconnected', onDisconnected);
+                console.log('Connecting to GATT server...');
                 server = await device.gatt.connect();
+                console.log('Connected! Server:', server.connected);
 
                 statusDiv.textContent = 'Getting Service...';
+                console.log('Getting primary service:', SERVICE_UUID);
                 const service = await server.getPrimaryService(SERVICE_UUID);
+                console.log('Service found:', service.uuid);
 
                 statusDiv.textContent = 'Subscribing to Characteristics...';
 
                 for (const [name, uuid] of Object.entries(CHARACTERISTICS)) {
                     try {
+                        console.log(`Getting characteristic ${name}: ${uuid}`);
                         const char = await service.getCharacteristic(uuid);
                         await char.startNotifications();
                         char.addEventListener('characteristicvaluechanged', (event) => handleValue(name, event.target.value));

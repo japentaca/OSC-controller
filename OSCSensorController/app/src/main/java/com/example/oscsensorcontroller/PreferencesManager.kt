@@ -42,6 +42,9 @@ class PreferencesManager(context: Context) {
         // Keys para normalización
         const val KEY_NORMALIZE_ENABLED = "normalize_enabled"
 
+        // Keys para modo de comunicación
+        const val KEY_COMMUNICATION_MODE = "communication_mode"
+
         // Valores por defecto
         const val DEFAULT_SERVER_IP = "192.168.0.5"
         const val DEFAULT_SERVER_PORT = 9000
@@ -49,6 +52,7 @@ class PreferencesManager(context: Context) {
         const val DEFAULT_THRESHOLD = 0.05f
         const val DEFAULT_SENSOR_ENABLED = true
         const val DEFAULT_NORMALIZE_ENABLED = false
+        const val DEFAULT_COMMUNICATION_MODE = "OSC" // "OSC" or "BLE"
     }
 
     // ==================== Configuración General ====================
@@ -64,6 +68,12 @@ class PreferencesManager(context: Context) {
 
     fun getNormalizeEnabled(): Boolean = prefs.getBoolean(KEY_NORMALIZE_ENABLED, DEFAULT_NORMALIZE_ENABLED)
     fun saveNormalizeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_NORMALIZE_ENABLED, enabled).apply()
+
+    fun getCommunicationMode(): String = prefs.getString(KEY_COMMUNICATION_MODE, DEFAULT_COMMUNICATION_MODE) ?: DEFAULT_COMMUNICATION_MODE
+    fun saveCommunicationMode(mode: String) = prefs.edit().putString(KEY_COMMUNICATION_MODE, mode).apply()
+    
+    fun isBleMode(): Boolean = getCommunicationMode() == "BLE"
+    fun isOscMode(): Boolean = getCommunicationMode() == "OSC"
 
     // ==================== Estados de Sensores ====================
 
